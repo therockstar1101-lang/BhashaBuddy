@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +68,7 @@ private fun BhashaBuddyApp(dark: Boolean, onDarkChange: (Boolean) -> Unit,
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("") }
     var history by remember { mutableStateOf(prefs.getStringSet("history", emptySet())?.toList()?.reversed() ?: emptyList()) }
+    val dailyStreak = remember { updateDailyStreak(prefs) }
     val clipboard = LocalClipboardManager.current
     val surface = if (dark) Color(0xFF202033) else Color.White
     val textColor = if (dark) Color.White else Ink
@@ -78,13 +82,13 @@ private fun BhashaBuddyApp(dark: Boolean, onDarkChange: (Boolean) -> Unit,
         Column(Modifier.fillMaxSize().background(if (dark) Color(0xFF121321) else Sky)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Text("🌐", fontSize = 27.sp)
+                Image(painter = painterResource(id = R.drawable.bhasha_buddy_logo), contentDescription = "Bhasha Buddy logo", modifier = Modifier.size(42.dp), contentScale = ContentScale.Fit)
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Bhasha Buddy", fontSize = 21.sp, fontWeight = FontWeight.Bold, color = textColor)
                     Text("Quick Translate", fontSize = 12.sp, color = Muted)
                 }
-                Text("🔥 ${prefs.getInt("streak", 1)} day streak", color = Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("🔥 $dailyStreak day streak", color = Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 IconButton(onClick = { onDarkChange(!dark) }) {
                     Icon(if (dark) Icons.Default.LightMode else Icons.Default.DarkMode, contentDescription = "Theme", tint = textColor)
                 }
@@ -223,6 +227,23 @@ private fun BhashaBuddyApp(dark: Boolean, onDarkChange: (Boolean) -> Unit,
     }
 }
 
+// One streak day per local calendar day; no account or login is required.
+private fun updateDailyStreak(prefs: android.content.SharedPreferences): Int {
+    val formatter = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault())
+    val today = formatter.format(java.util.Date())
+    val lastDay = prefs.getString("last_used_day", "") ?: ""
+    var streak = prefs.getInt("streak", 0)
+
+    if (lastDay != today) {
+        val yesterdayCalendar = java.util.Calendar.getInstance()
+        yesterdayCalendar.add(java.util.Calendar.DAY_OF_YEAR, -1)
+        val yesterday = formatter.format(yesterdayCalendar.time)
+        streak = if (lastDay == yesterday) streak + 1 else 1
+        prefs.edit().putString("last_used_day", today).putInt("streak", streak).apply()
+    }
+    return streak
+}
+
 @Composable
 private fun LanguagePill(language: String, flag: String, textColor: Color) {
     Row(verticalAlignment = Alignment.CenterVertically,
@@ -238,9 +259,7 @@ private fun WelcomeScreen(name: String, onName: (String) -> Unit, age: String,
                           onAge: (String) -> Unit, onStart: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Sky).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Box(Modifier.size(82.dp).clip(CircleShape).background(PalePurple), contentAlignment = Alignment.Center) {
-            Text("🌐", fontSize = 42.sp)
-        }
+        Image(painter = painterResource(id = R.drawable.bhasha_buddy_logo), contentDescription = "Bhasha Buddy mascot", modifier = Modifier.size(150.dp), contentScale = ContentScale.Fit)
         Spacer(Modifier.height(15.dp))
         Text("Welcome to", fontSize = 17.sp, color = Muted)
         Text("Bhasha Buddy", fontSize = 31.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
